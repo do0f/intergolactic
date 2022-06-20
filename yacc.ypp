@@ -284,7 +284,6 @@ AssignDeclaration:
 		}	
 	}
 
-
 IndexValue:
 	Value T_LEFTBRACKET Value T_RIGHTBRACKET
 	{

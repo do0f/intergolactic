@@ -1,6 +1,5 @@
 #include "entries.h"
 
-
 VarEntry::VarEntry(std::string symbol, std::string datatype): symbol(symbol), datatype(datatype)
 {
 }
