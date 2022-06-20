@@ -1,0 +1,758 @@
+%{
+#include <iostream>
+#include <string.h>
+#include "entries.h"
+#include "table.h"
+#include "debug.h"
+#include "util.h"
+#include "builtin.h"
+
+int yylex();
+extern FILE *yyin;
+extern int yylineno;
+extern int yycolno;
+
+void yyerror (const char *s) {fprintf (stderr, "\033[0;31m Line:%d | Column: %d %s\n\033[0m\n",yylineno, yycolno, s);exit(1);} 
+
+void OperationNotSupported(std::string type, std::string operation, int lineno)
+{
+    printf("\033[0;31m Line : %d | Semantic Error : operation %s is not supported for type %s\n\033[0m\n", lineno, operation.c_str(), type.c_str());
+    exit(1);
+}
+
+Table table;
+Scope nextScope;
+%}
+
+%code requires {
+	#include <vector>
+	#include <string>
+	#include "entries.h"
+}
+
+%start StartFile
+
+%define parse.error verbose
+
+%union {
+	int nval;
+	const char* sval;
+
+	std::string* name;
+	std::vector<std::string*>* names;
+
+	IType* type;
+	std::vector<IType*>* types;
+
+	Value* value;
+	std::vector<Value*>* values;
+
+	Var* var;
+	std::vector<Var*>* vars;
+}
+
+//To access yyloc
+%locations
+
+%token <sval> T_PACKAGE T_IMPORT T_FUNC T_BREAK T_CONST T_CONTINUE T_PRINT
+%token <sval> T_ELSE T_FOR T_IF T_RETURN T_VAR T_VAR_TYPE
+%token <sval> T_BOOL_CONST T_IDENTIFIER T_STRING T_NIL_VAL T_RUNE T_BYTE
+%token <sval> T_INCREMENT T_DECREMENT 
+%token <sval> T_INTEGER
+%token <sval> T_FLOAT
+
+%left <sval> T_ADD T_MINUS T_MULTIPLY T_DIVIDE T_MOD
+%right <sval> T_ASSIGN T_DECLASSIGN T_NOT
+%left <sval> T_LAND T_LOR T_EQL T_NEQ T_LEQ T_GEQ T_SEMICOLON
+%left <sval> T_GTR T_LSR T_LEFTPARANTHESES T_RIGHTPARANTHESES T_LEFTBRACE T_RIGHTBRACE T_LEFTBRACKET T_RIGHTBRACKET T_COMMA T_PERIOD
+
+%type <sval> binary_op left_unary_op right_unary_op bin_op math_op rel_op
+
+%type <sval> Arguments Returns Value IndexValue LvalueList
+%type <sval> FunctionCall Declaration Return
+
+%type <name> Identifier
+%type <names> IdentifierList
+
+%type <type> Type
+%type <types> TypeList
+
+%type <value> BasicLit Expression
+%type <values> ExpressionList
+
+%type <var> Argument
+%type <vars> ArgumentList
+
+%% 
+
+/**********************************************************/
+/**************************BASICS**************************/
+/**********************************************************/
+
+BasicLit:
+	T_INTEGER 
+	{
+		$$=new Type(builtin::inttype);
+	}
+	| 
+	T_FLOAT 
+	{
+		$$=new Type(builtin::float64type);
+	}
+	| 
+	T_STRING 
+	{
+		$$=new Type(builtin::stringtype);
+	}
+	|
+	T_BOOL_CONST 
+	{
+		$$=new Type(builtin::booltype);
+	}
+	| 
+	T_RUNE
+	{
+		$$=new Type(builtin::runetype);
+	}
+	| 
+	T_BYTE
+	{
+		$$=new Type(builtin::bytetype);
+	}
+
+Identifier:
+	T_IDENTIFIER
+	{
+		$$ = new std::string($1);
+	}
+
+IdentifierList:
+	IdentifierList T_COMMA Identifier 
+	{
+		$1->push_back($3);
+		$$ = $1;
+	}
+	|
+	Identifier 
+	{
+		$$=new std::vector<std::string*>($1);
+	};
+
+Type:
+	T_IDENTIFIER 
+	{
+		IType* type = new Basic($1);
+		$$ = type;
+	};
+	|
+	T_LEFTBRACKET T_RIGHTBRACKET Type
+	{
+		IType* type = new Slice($3);
+		$$ = type;
+	};
+
+TypeList:
+	TypeList T_COMMA Type
+	{
+		$1->push_back($3);
+		$$ = $1;
+	}
+	| 
+	Type
+	{
+		$$=new std::vector<IType*>($1);
+	}
+
+/**********************************************************/
+/***********************START OF FILE**********************/
+/**********************************************************/
+
+
+StartFile:
+    T_PACKAGE T_IDENTIFIER ImportDecl TopLevelDeclList {
+		DEBUG_PRINT("%d: package %s\n", @1.last_line, $2);
+	};
+
+
+/**********************************************************/
+/***********************IMPORTS****************************/
+/**********************************************************/
+
+ImportDecl:
+	T_IMPORT T_STRING
+	{
+		DEBUG_PRINT("%d: import %s\n", @1.last_line, $2);
+	}
+	| T_IMPORT T_LEFTPARANTHESES ImportList T_RIGHTPARANTHESES
+	{
+	}
+	|
+	{
+		DEBUG_PRINT("%d: no imports\n", @$.last_line);
+	}
+
+ImportList:
+	ImportList T_STRING
+	{
+		DEBUG_PRINT("%d: import %s\n", @1.last_line, $2);
+	}
+	| 
+	T_STRING
+	{		
+		DEBUG_PRINT("%d: import %s\n", @1.last_line,$1);
+	};
+
+
+/**********************************************************/
+/****TOP LEVEL DECLARATIONS (IN GLOBAL SCOPE)**************/
+/**********************************************************/
+
+TopLevelDeclList:
+    TopLevelDeclList TopLevelDecl
+	{
+
+	}
+    | 
+	TopLevelDecl
+	{
+
+	};
+
+TopLevelDecl:
+	Declaration
+	{
+
+	}	
+	| 
+	FunctionDecl 
+	{
+
+	};
+
+/**********************************************************/
+/*******************DECLARATIONS***************************/
+/**********************************************************/
+
+Declaration:
+	// var a int = 5
+	// var a, b int = 5, 6
+	T_VAR IdentifierList Type T_ASSIGN ExpressionList
+	{
+		DEBUG_PRINT("%d: var %s %s = <val> %s\n", @1.last_line, $2, $3, $5);
+
+		auto& names = $2;
+		auto& type = $3;
+
+		for (auto& name: names)
+		{
+			Var var{name, type};
+			table.Lookup(var, true, @1.last_line);
+		}
+		
+		std::vector<IType*> types{type, names.size()};
+		TypeCheck(types, expressionTypes, @1.last_line);
+	} 
+	// var a int (default value)
+	// var a, b int
+	| T_VAR IdentifierList Type
+	{ 
+		DEBUG_PRINT("%d: var %s %s\n", @1.last_line, $2, $3);
+
+		const auto ids = SplitList($2);
+		for (auto& id: ids)
+		{
+			VarEntry entry{id, $3};
+			table.Lookup(entry, true, @1.last_line);
+		}
+	}
+
+AssignDeclaration:
+	// a := 5
+	// a, b := 5, "str"
+	IdentifierList T_DECLASSIGN ExpressionList
+	{	
+		DEBUG_PRINT("%d: %s := <val> %s\n", @1.last_line, $1, $3);
+
+		const auto ids = SplitList($1);
+		const auto expressionTypes = SplitList($3);
+		SizeCheck(ids, expressionTypes, @1.last_line);
+
+		for (std::size_t i = 0; i < ids.size(); ++i)
+		{
+			VarEntry entry{ids[i], expressionTypes[i]};
+			table.Lookup(entry, true, @1.last_line);
+		}	
+	}
+
+
+IndexValue:
+	Value T_LEFTBRACKET Value T_RIGHTBRACKET
+	{
+		DEBUG_PRINT("index value %s [%s]\n", $1, $3);
+		if (IsSliceType($1))
+		{
+			TypeCheck(SplitList($3), {inttype}, @1.last_line);
+			$$ = strdup(GetSliceType($1).c_str());
+		}
+		else
+		{
+			OperationNotSupported($1, "[]", @1.last_line);
+		}
+	}
+
+LvalueList:
+	LvalueList T_COMMA T_IDENTIFIER
+	{
+		std::string types($1);
+		types += ",";
+		types += $3;
+		$$ = strdup(types.c_str());
+	}
+	|
+	LvalueList T_COMMA IndexValue
+	{
+		std::string types($1);
+		types += ",";
+		types += $3;
+		$$ = strdup(types.c_str());
+	}
+	|
+	T_IDENTIFIER
+	{
+		const auto entry = table.GetVar($1, @1.last_line);
+		$$ = strdup(entry.datatype.c_str());
+	}
+	|
+	IndexValue
+	{
+		$$ = $1;
+	}
+
+Assignment:
+	LvalueList T_ASSIGN ExpressionList
+	{
+		DEBUG_PRINT("%d: %s = <val> %s\n", @1.last_line, $1, $3);
+		const auto lvalueTypes = SplitList($1);
+		const auto expressionTypes = SplitList($3);
+		SizeCheck(lvalueTypes, expressionTypes, @1.last_line);
+		TypeCheck(lvalueTypes, expressionTypes, @1.last_line);
+	}
+
+
+FunctionDecl:
+	Signature Body
+	{
+	};
+
+Signature:
+	T_FUNC T_IDENTIFIER Arguments Returns
+	{
+		DEBUG_PRINT("%d: func %s arguments %s returns %s\n", @1.last_line, $2, $3, $4);
+		std::string type = FuncType($3, $4);
+		VarEntry entry{$2, type};
+		table.Lookup(entry, true, @1.last_line);
+
+		std::vector<VarEntry> entries;
+		const auto args = SplitList($3);
+		for (const auto& arg: args)
+		{
+			entries.push_back(GetVarEntry(arg));
+		}
+		FuncEntry func{$2, entries, SplitList($4)};
+		nextScope = Scope{func};
+	};
+
+Body:
+	Block{};
+
+ScopeBegin:
+	T_LEFTBRACE
+	{
+		if (nextScope.IsFunc()) 
+		{
+			DEBUG_PRINT("%d: push func scope\n", @1.last_line);
+		}
+		else if (nextScope.IsStatement()) 
+		{
+			DEBUG_PRINT("%d: push statement scope\n", @1.last_line);
+		}
+		else
+		{
+			DEBUG_PRINT("%d: push simple scope\n", @1.last_line);
+		}
+		table.PushScope(nextScope);
+		nextScope = Scope{}
+	}
+
+ScopeEnd:
+	T_RIGHTBRACE
+	{
+		DEBUG_PRINT("%d: pop scope\n", @1.last_line);
+		table.PopScope();
+	}
+
+Block:
+	ScopeBegin StatementList ScopeEnd 
+	{
+	}
+
+StatementList:
+	| StatementList Statement
+    | Statement{};
+
+Statement:
+	Declaration {}
+	| AssignDeclaration{}
+	| Assignment{}
+	| FunctionCall{}
+	| Return{}
+	/* | SimpleStmt {} */
+	| Block {}
+	| IfStmt {}
+	| For {} 
+	| Break{}
+	| Continue{}
+	/*| PrintStmt {}; */
+
+Return:
+	T_RETURN ExpressionList
+	{
+		DEBUG_PRINT("%d: return %s\n", @1.last_line, $2);
+		const auto func = table.GetReturn(@1.last_line);
+		SizeCheck(SplitList($2), func->returns, @1.last_line);
+		TypeCheck(SplitList($2), func->returns, @1.last_line);
+	}
+	|
+	T_RETURN
+	{
+		DEBUG_PRINT("%d: return %s\n", @1.last_line, "<void>");
+		const auto func = table.GetReturn(@1.last_line);
+		SizeCheck(std::vector<std::string>{}, func->returns, @1.last_line);
+		TypeCheck(std::vector<std::string>{}, func->returns, @1.last_line);
+	}
+
+Arguments:
+	T_LEFTPARANTHESES T_RIGHTPARANTHESES
+	{
+		$$ = empty;
+	}
+	|
+	T_LEFTPARANTHESES ArgumentList T_RIGHTPARANTHESES
+	{
+		$$ = $2;
+	}
+
+Returns:
+	Type
+	{
+		$$ = $1;
+	}
+	| T_LEFTPARANTHESES TypeList T_RIGHTPARANTHESES
+	{
+		$$ = $2;
+	}
+	|
+	{
+		$$ = empty;
+	};
+
+ArgumentList:
+	ArgumentList T_COMMA Argument
+	{
+		std::string args($1);
+		args += ",";
+		args += $3;
+		$$ = strdup(args.c_str());
+	}
+	| Argument
+	{
+		$$ = $1;
+	}
+
+Argument:
+	T_IDENTIFIER Type
+	{
+		std::string argument($1);
+		argument += " ";
+		argument += $2;
+		$$ = strdup(argument.c_str());
+	};
+
+FunctionCall:
+	T_IDENTIFIER T_LEFTPARANTHESES T_RIGHTPARANTHESES
+	{
+		const auto func = table.GetVar($1, @1.last_line);
+		const auto funcSignature = FromFuncType(func.datatype);
+
+		TypeCheck(std::vector<std::string>{}, SplitList(funcSignature.first), @1.last_line);
+		$$ = strdup(funcSignature.second.c_str());
+	}
+	| T_IDENTIFIER T_LEFTPARANTHESES ExpressionList T_RIGHTPARANTHESES
+	{
+		const auto func = table.GetVar($1, @1.last_line);
+		const auto funcSignature = FromFuncType(func.datatype);
+
+		const auto types = SplitList($3);
+		auto argsTypes = GetTypesOfArgs(SplitList(funcSignature.first));
+		SizeCheck(types, argsTypes, @1.last_line);
+		TypeCheck(types, argsTypes, @1.last_line);
+		$$ = strdup(funcSignature.second.c_str());
+	};
+
+IfStmt:
+	T_IF Expression Block {
+		DEBUG_PRINT("%d: if {}\n", @1.last_line);
+	}
+	| T_IF Expression Block T_ELSE IfStmt {
+		DEBUG_PRINT("%d: if {} else\n", @1.last_line);
+	}
+	| T_IF Expression Block T_ELSE Block {
+		DEBUG_PRINT("%d: if {} else {}\n", @1.last_line);
+	};
+
+
+/* SimpleStmt:
+	AssignDeclaration {}
+	|
+	T_IDENTIFIER assign_op Expression {
+		search_id($1,@1.last_line,0);lookup($2,@2.last_line,'O',NULL,NULL);update($1,@1.last_line,$3);
+		type_check($1,$3,yylineno);
+	}
+	| Expression T_INCREMENT {
+		int temp = get_val($1,@1.last_line);
+		search_id($1,@1.last_line,0);lookup($2,@2.last_line,'O',NULL,NULL);update($1,@1.last_line,(char *)to_string(temp+1).c_str());
+	}
+	| Expression T_DECREMENT {
+		int temp = get_val($1,@1.last_line);search_id($1,@1.last_line,0);lookup($2,@2.last_line,'O',NULL,NULL);update($1,@1.last_line,(char *)to_string(temp-1).c_str());
+	} 
+	| ExpressionList assign_op ExpressionList {
+		// b,c = 2,3
+	}
+	| empty {}; */
+
+
+PreStmt:
+	Expression{}
+	|
+	Assignment{}
+	|
+	AssignDeclaration{}
+
+PostStmt:
+	Expression{}
+	|
+	Assignment
+
+ForStmt: 
+  T_FOR PreStmt T_SEMICOLON Expression T_SEMICOLON PostStmt 
+  {
+	  DEBUG_PRINT("%d for ; ;\n", @1.last_line);
+	  nextScope = Scope{StatementType::For}
+  };
+
+For:
+	ForStmt Body
+	{
+	}
+
+Break:
+	T_BREAK
+	{
+		DEBUG_PRINT("%d: break\n", @1.last_line);
+		const auto stmt = table.GetStatement(@1.last_line);
+	}
+
+Continue:
+	T_CONTINUE
+	{
+		DEBUG_PRINT("%d: continue\n", @1.last_line);
+		const auto stmt = table.GetStatement(@1.last_line);
+	}
+
+ExpressionList:
+	ExpressionList T_COMMA Expression 
+	{
+		std::string types($1);
+		types += ",";
+		types += $3;
+		DEBUG_PRINT("%d: expression list %s\n", @1.last_line, types.c_str());
+		$$ = strdup(types.c_str());
+	}
+	| Expression 
+	{
+		DEBUG_PRINT("%d: expression %s\n", @1.last_line, $1);
+		$$=$1;
+	};
+
+Expression:
+	Value
+	{
+		//DEBUG_PRINT("value %s\n", $1);
+		$$ = $1;
+	}
+	|
+	IndexValue
+	{
+		$$ = $1;
+	}
+	|
+	left_unary_op Value
+	{
+		//DEBUG_PRINT("unary op %s %s\n", $1, $2);
+		std::string type = $2;
+		std::string operation = $1;
+
+		if (operation == "!")
+		{
+			if (type != "bool")
+			{
+				OperationNotSupported(type, operation, @1.last_line);
+			}
+			$$ = booltype;
+		}
+		else if (operation == "-")
+		{
+			if (type != "int" && type != "float64")
+			{
+				OperationNotSupported(type, operation, @1.last_line);
+			}
+			$$ = strdup(type.c_str());
+		}
+	}
+	|
+	Value right_unary_op
+	{
+		//DEBUG_PRINT("%s %s unary op\n", $1, $2);
+		std::string type = $1;
+		std::string operation = $2;
+
+		if (type != "int" && type != "float64")
+		{
+			OperationNotSupported(type, operation, @1.last_line);
+		}
+		$$ = strdup(type.c_str());
+	}
+	|
+	Expression binary_op Value
+	{
+		TypeCheck({$1}, {$3}, @1.last_line);
+		std::string type = $1;
+		std::string operation = $2;
+
+		if (operation == "+" || operation == "-" || operation == "*" || operation == "/" || operation == "%")
+		{
+			//DEBUG_PRINT("math op %s %s %s\n", $1, $2, $3);
+			if (type == "int" || type == "float64")
+			{
+				$$ = $1;
+			}
+			else if (type == "string" && operation == "+")
+			{
+				$$ = $1;
+			}
+			else
+			{
+				OperationNotSupported(type, operation, @1.last_line);
+			}
+		}
+		else if (operation == ">" || operation == "<" || operation == ">=" || operation == "<=" || operation == "==")
+		{
+			//DEBUG_PRINT("relative op %s %s %s\n", $1, $2, $3);
+			TypeCheck({$1}, {$3}, @1.last_line);
+			if (type == "int" || type == "float64" || type == "bool")
+			{
+				$$ = booltype;
+			}
+			else
+			{
+				OperationNotSupported(type, operation, @1.last_line);
+			}
+		}
+		else if (operation == "&&" || operation == "||")
+		{
+			//DEBUG_PRINT("binary op %s %s %s\n", $1, $2, $3);
+			TypeCheck({$1}, {$3}, @1.last_line);
+			if (type == "bool")
+			{
+				$$ = booltype;
+			}
+			else
+			{
+				OperationNotSupported(type, operation, @1.last_line);
+			}
+		}
+	};
+
+Value:
+	BasicLit
+	{
+		//DEBUG_PRINT("basic lit %s\n", $1);
+		$$=$1;
+	}
+	| T_IDENTIFIER
+	{
+		//DEBUG_PRINT("identifier %s\n", "");
+		$$=strdup(table.GetVar($1, @1.last_line).datatype.c_str());
+	}
+	|
+	FunctionCall
+	{
+		//DEBUG_PRINT("function call %s\n", $1);
+		$$ = $1;
+	};
+
+binary_op:
+	math_op
+	{
+		$$ = $1;
+	}
+	|
+	rel_op
+	{
+		$$ = $1;
+	}
+	|
+	bin_op
+	{
+		$$ = $1;
+	};
+
+math_op:
+	T_ADD {$$=$1;}
+	| T_MINUS {$$=$1;}
+	| T_MULTIPLY {$$=$1;}
+	| T_DIVIDE {$$=$1;}
+	| T_MOD {$$=$1;};
+
+rel_op:
+	T_EQL {$$=$1;}
+	| T_NEQ {$$=$1;}
+	| T_LSR {$$=$1;}
+	| T_LEQ {$$=$1;}
+	| T_GTR {$$=$1;}
+	| T_GEQ {$$=$1;};
+
+bin_op:
+	T_LOR {$$=$1;}
+	| T_LAND {$$=$1;};
+
+left_unary_op:
+	T_MINUS {$$=$1;}
+	| T_NOT {$$=$1;};
+
+right_unary_op:
+	T_DECREMENT{$$=$1;}
+	| T_INCREMENT{$$=$1;};
+%%
+
+int main (int argc, char** argv) {	
+	printf("Inside main\n");
+	FILE * fp= fopen(argv[1], "r");
+	yyin = fp;
+	printf("Read the input file, continue with Lexing and Parsing\n");
+	printf("Performing Lexical analysis......\n\n");
+	yyparse ( );
+	printf("\n\033[0;32mParsing completed.\033[0m\n\n");
+	return 0;
+}
+
