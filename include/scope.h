@@ -25,11 +25,13 @@ public:
   std::shared_ptr<StatementType> GetStatement();
 
   std::unordered_map<std::string, Var> &GetVars();
-  std::unordered_map<std::string, Type> &GetTypes();
+  Var Scope::GetVar(const std::string& name)
+
+  std::unordered_map<std::string, IType*> &GetTypes();
 
 private:
   std::unordered_map<std::string, Var> vars;
-  std::unordered_map<std::string, Type> types;
+  std::unordered_map<std::string, IType*> types;
 
   std::shared_ptr<StatementType> statement;
   std::shared_ptr<FuncEntry> func;

@@ -1,5 +1,6 @@
 #include "table.h"
 #include "builtin.h"
+#include "util.h"
 
 // global table
 // needs to have builtin stuff
@@ -90,7 +91,7 @@ void Table::Lookup(Var var, bool isDeclaration, int lineno)
   }
 }
 
-void Table::Lookup(Type type, bool isDeclaration, int lineno)
+void Table::Lookup(IType* type, bool isDeclaration, int lineno)
 {
   const auto foundScope = lookup(type.name, EntryType::type, isDeclaration, lineno);
   if (isDeclaration)
@@ -99,11 +100,17 @@ void Table::Lookup(Type type, bool isDeclaration, int lineno)
   }
 }
 
-VarEntry Table::GetVar(std::string symbol, int lineno)
+Var Table::GetVar(const std::string& name, int lineno)
 {
-  const auto foundScope = lookup(symbol, EntryType::var, false, lineno);
-  const auto entry = table[foundScope - 1].GetVars().find(symbol);
-  return entry->second;
+  for (int scope = table.size() - 1; scope > 0; --scope)
+  {
+    auto var = table[scope].GetVar(name);
+    if (var.name != "")
+    {
+      return var;
+    }
+  }
+  ErrorVarNotFound(name, lineno);
 }
 
 TypeEntry Table::GetType(std::string symbol, int lineno)

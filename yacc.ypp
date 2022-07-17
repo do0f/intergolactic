@@ -54,21 +54,32 @@ Scope nextScope;
 //To access yyloc
 %locations
 
-%token <sval> T_PACKAGE T_IMPORT T_FUNC T_BREAK T_CONST T_CONTINUE T_PRINT
-%token <sval> T_ELSE T_FOR T_IF T_RETURN T_VAR T_VAR_TYPE
+%token <sval> T_BREAK T_CASE T_CHAN T_CONST T_CONTINUE
+%token <sval> T_DEFAULT T_DEFER T_ELSE T_FALLTHROUGH T_FOR
+%token <sval> T_FUNC T_GO T_GOTO T_IF T_IMPORT
+%token <sval> T_INTERFACE T_MAP T_PACKAGE T_RANGE T_RETURN
+%token <sval> T_SELECT T_STRUCT T_SWITCH T_TYPE T_VAR
+
+
+%token <sval> T_PLUS T_MINUS T_MULTIPLY T_DIVIDE T_MOD
+%token <sval> T_BIT_AND T_BIT_OR T_BIT_XOR T_SHIFT_LEFT T_SHIFT_RIGHT T_AND_XOR
+%token <sval> T_PLUS_EQ T_MINUS_EQ T_MULTIPLY_EQ T_DIVIDE_EQ T_MOD_EQ
+%token <sval> T_BIT_AND_EQ T_BIT_OR_EQ T_XOR_EQ T_SHIFT_LEFT_EQ T_SHIFT_RIGHT_EQ T_AND_XOR_EQ
+%token <sval> T_AND T_OR T_ARROW T_INCREMENT T_DECREMENT
+%token <sval> T_DOUBLE_EQ T_GREATER T_LESSER T_EQ T_NOT T_TILDE
+%token <sval> T_NOT_EQ T_LESSER_EQ T_GREATER_EQ T_DECL_EQ T_ELLIPSIS
+%token <sval> T_LEFT_PARANTHESES T_LEFT_BRACKET T_LEFT_BRACE T_COMMA T_PERIOD
+%token <sval> T_RIGHT_PARANTHESES T_RIGHT_BRACKET T_RIGHT_BRACE T_SEMICOLON T_COLON
+
+
 %token <sval> T_BOOL_CONST T_IDENTIFIER T_STRING T_NIL_VAL T_RUNE T_BYTE
 %token <sval> T_INCREMENT T_DECREMENT 
 %token <sval> T_INTEGER
 %token <sval> T_FLOAT
 
-%left <sval> T_ADD T_MINUS T_MULTIPLY T_DIVIDE T_MOD
-%right <sval> T_ASSIGN T_DECLASSIGN T_NOT
-%left <sval> T_LAND T_LOR T_EQL T_NEQ T_LEQ T_GEQ T_SEMICOLON
-%left <sval> T_GTR T_LSR T_LEFTPARANTHESES T_RIGHTPARANTHESES T_LEFTBRACE T_RIGHTBRACE T_LEFTBRACKET T_RIGHTBRACKET T_COMMA T_PERIOD
-
 %type <sval> binary_op left_unary_op right_unary_op bin_op math_op rel_op
 
-%type <sval> Arguments Returns Value IndexValue LvalueList
+%type <sval> Arguments Returns IndexValue LvalueList
 %type <sval> FunctionCall Declaration Return
 
 %type <name> Identifier
@@ -77,10 +88,10 @@ Scope nextScope;
 %type <type> Type
 %type <types> TypeList
 
-%type <value> BasicLit Expression
-%type <values> ExpressionList
+%type <value> BasicLit Expression Rvalue Value
+%type <values> ExpressionList RvalueList ValueList
 
-%type <var> Argument
+%type <var> Argument Lvalue
 %type <vars> ArgumentList
 
 %% 
@@ -120,6 +131,463 @@ BasicLit:
 		$$=new Type(builtin::bytetype);
 	}
 
+/**********************************************************/
+/**************************TYPES***************************/
+/**********************************************************/
+Type:
+	TypeName
+	{
+
+	}
+	|
+	TypeName TypeArgs
+	{
+
+	}
+	|
+	TypeLit
+	{
+
+	}
+	|
+	'(' Type ')'
+	{
+
+	};
+
+TypeName:
+	T_IDENTIFIER
+	{
+
+	}
+	|
+	QualifiedIdent
+	{
+
+	};
+
+TypeArgs:
+	'[' TypeList ']'
+	{
+
+	}
+	|
+	'[' TypeList ',' ']'
+	{
+		
+	};
+
+TypeList:
+	Type
+	{
+		$$=new std::vector<IType*>($1);
+	}
+	|
+	TypeList ',' Type
+	{
+		$1->push_back($3);
+		$$ = $1;
+	};
+
+TypeLit:
+	ArrayType
+	{
+
+	}
+	|
+	StructType
+	{
+
+	}
+	|
+	PointerType
+	{
+
+	}
+	|
+	FunctionType
+	{
+
+	}
+	|
+	InterfaceType
+	{
+
+	}
+	|
+	SliceType
+	{
+
+	}
+	|
+	MapType
+	{
+
+	}
+	|
+	ChannelType
+	{
+
+	};
+
+ArrayType:
+	'[' ArrayLength ']' ElementType
+	{
+
+	};
+ArrayLength:
+	Expression
+	{
+
+	};
+ElementType:
+	Type
+	{
+
+	};
+
+SliceType:
+	'[' ']' ElementType
+	{
+
+	};
+
+StructType:
+	T_STRUCT '{' FieldDeclList '}'
+	{
+
+	};
+FieldDeclList:
+	FieldDecl ';'
+	{
+
+	}
+	|
+	FieldDeclList FieldDecl ';'
+	{
+
+	};
+FieldDeclBase:
+	IdentifierList Type
+	{
+
+	}
+	|
+	EmbeddedField
+	{
+
+	};
+FieldDecl:
+	FieldDeclBase
+	{
+
+	}
+	|
+	FieldDeclBase Tag
+	{
+
+	};
+EmbeddedField:
+	'*' TypeName
+	{
+
+	}
+	|
+	TypeName
+	{
+
+	};
+Tag:
+	T_STRING
+	{
+
+	};
+
+PointerType:
+	'*' BaseType
+	{
+
+	};
+BaseType:
+	Type
+	{
+
+	};
+
+FunctionType:
+	T_FUNC Signature
+	{
+
+	};
+Signature:
+	Parameters
+	{
+
+	}
+	|
+	Parameters Result
+	{
+
+	};
+Result:
+	Parameters
+	{
+
+	}
+	|
+	Type
+	{
+
+	};
+Parameters:
+	'(' ')'
+	{
+
+	}
+	|
+	'(' ParameterList ')'
+	{
+
+	}
+	|
+	'(' ParameterList ',' ')'
+	{
+
+	};
+ParameterList:
+	ParameterDecl
+	{
+
+	}
+	|
+	ParameterList ',' ParameterDecl
+	{
+
+	};
+ParameterDecl:
+	Type
+	{
+
+	}
+	|
+	T_ELLIPSIS Type
+	{
+
+	}
+	|
+	IdentifierList Type
+	{
+
+	}
+	|
+	IdentifierList T_ELLIPSIS Type
+	{
+
+	};
+
+InterfaceType:
+	T_INTERFACE '{' '}'
+	{
+
+	}
+	|
+	T_INTERFACE '{' InterfaceElemList '}'
+	{
+
+	};
+InterfaceElemList:
+	InterfaceElem ';'
+	{
+
+	}
+	|
+	InterfaceElemList InterfaceElem ';'
+	{
+
+	};
+InterfaceElem:
+	MethodElem
+	{
+
+	}
+	|
+	TypeElem
+	{
+
+	};
+MethodElem:
+	MethodName Signature
+	{
+
+	};
+MethodName:
+	T_IDENTIFIER
+	{
+
+	};
+TypeElem:
+	TypeTermList
+	{
+
+	};
+TypeTermList:
+	TypeTerm
+	{
+
+	}
+	|
+	TypeTermList '|' TypeTerm
+	{
+
+	};
+TypeTerm:
+	Type
+	{
+
+	}
+	|
+	UnderlyingType
+	{
+
+	};
+UnderlyingType:
+	'~' Type
+	{
+
+	};
+
+MapType:
+	T_MAP '[' KeyType ']' ElementType
+	{
+
+	};
+KeyType:
+	Type
+	{
+
+	};
+
+ChannelType:
+	T_CHAN ElementType
+	{
+
+	}
+	|
+	T_CHAN T_ARROW ElementType
+	{
+
+	}
+	|
+	T_ARROW T_CHAN ElementType
+	{
+
+	};
+/**********************************************************/
+/**************************BLOCKS**************************/
+/**********************************************************/
+Block:
+	'{' StatementList '}'
+	{
+
+	};
+StatementList:
+	//empty
+	{
+
+	}
+	|
+	StatementListBase
+	{
+
+	};
+StatementListBase:
+	Statement ';'
+	{
+
+	}
+	|
+	StatementListBase Statement ';'
+	{
+
+	};
+/**********************************************************/
+/**********************DECLARATIONS************************/
+/**********************************************************/
+Declaration:
+	ConstDecl
+	{
+
+	}
+	|
+	TypeDecl
+	{
+
+	}
+	|
+	VarDecl
+	{
+
+	};
+
+TopLevelDecl:
+	Declaration
+	{
+
+	}
+	|
+	FunctionDecl
+	{
+
+	}
+	| 
+	MethodDecl
+	{
+
+	};
+
+ConstDecl:
+	T_CONST ConstSpec
+	{
+
+	}
+	|
+	T_CONST '(' ConstSpecList ')'
+ConstSpecList:
+	// empty
+	{
+
+	}
+	|
+	ConstSpecListBase
+	{
+
+	};
+ConstSpecListBase:
+	ConstSpec ';'
+	{
+
+	}
+	|
+	ConstSpecListBase ConstSpec ';'
+	{
+
+	};
+ConstSpec:
+	IdentifierList
+	{
+
+	}
+	|
+	IdentifierList '=' ExpressionList
+	{
+
+	}
+	|
+	IdentifierList Type '=' ExpressionList
+	{
+
+	};
+
 Identifier:
 	T_IDENTIFIER
 	{
@@ -127,49 +595,638 @@ Identifier:
 	}
 
 IdentifierList:
-	IdentifierList T_COMMA Identifier 
+	Identifier 
+	{
+		$$=new std::vector<std::string*>($1);
+	}
+	|
+	IdentifierList ',' Identifier 
+	{
+		$1->push_back($3);
+		$$ = $1;
+	};
+
+ExpressionList:
+	Expression 
+	{
+
+	}
+	|
+	ExpressionList ',' Expression 
+	{
+
+	};
+
+/**********************************************************/
+/*****************TYPE DECLARATIONS************************/
+/**********************************************************/
+
+TypeDecl:
+	T_TYPE TypeSpec
+	{
+
+	}
+	|
+	T_TYPE '(' TypeSpecList ')'
+	{
+
+	};
+TypeSpecList:
+	// empty
+	{
+
+	}
+	|
+	TypeSpecListBase
+	{
+
+	};
+TypeSpecListBase:
+	TypeSpec ';'
+	{
+
+	}
+	|
+	TypeSpecListBase TypeSpec ';'
+	{
+
+	};
+TypeSpec:
+	AliasDecl
+	{
+
+	}
+	|
+	TypeDef
+	{
+
+	};
+
+AliasDecl:
+	Identifier '=' Type
+	{
+
+	};
+
+TypeDef:
+	Identifier Type
+	{
+
+	}
+	|
+	Identifier TypeParameters Type
+	{
+
+	};
+
+TypeParameters:
+	'[' TypeParamList ']'
+	{
+
+	}
+	|
+	'[' TypeParamList ',' ']'
+	{
+
+	};
+TypeParamList:
+	TypeParamDecl
+	{
+
+	}
+	| 
+	TypeParamList ',' TypeParamDecl
+	{
+
+	};
+TypeParamDecl:
+	IdentifierList TypeConstraint
+	{
+
+	};
+
+TypeConstraint:
+	TypeElem
+	{
+
+	};
+
+/**********************************************************/
+/***************VARIABLE DECLARATIONS**********************/
+/**********************************************************/
+
+VarDecl:
+	T_VAR VarSpec
+	{
+
+	}
+	|
+	T_VAR '(' VarSpecList ')'
+	{
+
+	};
+VarSpecList:
+	// empty
+	{
+
+	}
+	|
+	VarSpecListBase
+	{
+
+	};
+VarSpecListBase:
+	VarSpec ';'
+	{
+
+	}
+	|
+	VarSpecListBase VarSpec ';'
+	{
+
+	};
+VarSpec:
+	IdentifierList Type
+	{
+
+	}
+	|
+	IdentifierList Type '=' ExpressionList
+	{
+
+	}
+	|
+	IdentifierList '=' ExpressionList
+	{
+
+	};
+
+ShortVarDecl:
+	IdentifierList T_DECL_EQ ExpressionList
+	{
+
+	};
+
+/**********************************************************/
+/***************FUNCTION DECLARATIONS**********************/
+/**********************************************************/
+
+FunctionDecl:
+	T_FUNC FunctionName Signature
+	{
+
+	}
+	|
+	T_FUNC FunctionName TypeParameters Signature
+	{
+
+	}
+	|
+	T_FUNC FunctionName Signature FunctionBody
+	{
+
+	}
+	|
+	T_FUNC FunctionName TypeParameters Signature FunctionBody
+	{
+
+	};
+FunctionName:
+	Identifier
+	{
+
+	};
+FunctionBody:
+	Block
+	{
+
+	};
+
+MethodDecl:
+	T_FUNC Receiver MethodName Signature
+	{
+
+	}
+	|
+	T_FUNC Receiver MethodName Signature FunctionBody
+	{
+
+	};
+Receiver:
+	Parameters
+	{
+
+	};
+/**********************************************************/
+/*********************EXPRESSIONS**************************/
+/**********************************************************/
+Operand:
+	Literal
+	{
+
+	}
+	|
+	OperandName
+	{
+
+	}
+	|
+	OperandName TypeArgs
+	{
+
+	}
+	|
+	'(' Expression ')'
+	{
+
+	};
+
+Literal:
+	BasicLit
+	{
+
+	}
+	|
+	CompositeLit
+	{
+
+	}
+	|
+	FunctionLit
+	{
+
+	};
+
+BasicLit:
+	int_lit
+	{
+
+	}
+	|
+	float_lit
+	{
+
+	}
+	|
+	imaginary_lit
+	{
+
+	}
+	|
+	rune_lit
+	{
+
+	}
+	|
+	string_lit
+	{
+
+	};
+OperandName:
+	Identifier
+	{
+
+	}
+	|
+	QualifiedIdent
+	{
+
+	};
+
+QualifiedIdent:
+	PackageName '.' Identifier
+	{
+
+	};
+
+CompositeLit:
+	LiteralType LiteralValue
+	{
+
+	};
+LiteralType:
+	StructType
+	{
+
+	}
+	|
+	ArrayType
+	{
+
+	}
+	|
+	'[' T_ELLIPSIS ']' ElementType
+	{
+
+	}
+	|
+	SliceType
+	{
+
+	}
+	|
+	MapType
+	{
+
+	}
+	|
+	TypeName
+	{
+
+	};
+LiteralValue:
+	'{' '}'
+	{
+
+	}
+	|
+	'{' ElementList '}'
+	{
+
+	}
+	|
+	'{' ElementList ',' '}'
+	{
+
+	};
+ElementList:
+	KeyedElement
+	{
+
+	}
+	|
+	ElementList ',' KeyedElement
+	{
+
+	};
+KeyedElement:
+	Key ':' Element
+	{
+
+	}
+	|
+	Element
+	{
+
+	};
+Key: 
+	FieldName Expression LiteralValue
+	{
+
+	};
+FieldName:
+	Identifier
+	{
+
+	};
+Element: 
+	Expression LiteralValue
+	{
+
+	};
+
+FunctionLit:
+	T_FUNC Signature FunctionBody
+	{
+
+	};
+
+PrimaryExpr:
+	Operand
+	{
+
+	}
+	|
+	Conversion
+	{
+
+	}
+	|
+	MethodExpr
+	{
+
+	}
+	|
+	PrimaryExpr Selector
+	{
+
+	}
+	|
+	PrimaryExpr Index
+	{
+
+	}
+	|
+	PrimaryExpr Slice
+	{
+
+	}
+	|
+	PrimaryExpr TypeAssertion
+	{
+
+	}
+	|
+	PrimaryExpr Arguments
+	{
+
+	};
+
+Selector:
+	'.' Identifier
+	{
+		
+	};
+Index:
+	'[' Expression ']'
+	{
+
+	};
+Slice:
+	'[' ':' ']'
+	{
+
+	}
+	|
+	'[' Expression ':' ']'
+	{
+
+	}
+	|
+	'[' ':' Expression ']'
+	{
+		
+	}
+	|
+	'[' Expression ':' Expression ']'
+	{
+
+	}
+	|
+	'[' ':' Expression ':' Expression ']'
+	{
+
+	}
+	|
+	'[' Expression ':' Expression ':' Expression ']'
+	{
+
+	};
+TypeAssertion:
+	'.' '(' Type ')'
+	{
+
+	};
+Arguments:
+	'(' ')'
+	{
+
+	}
+	|
+	'(' ArgumentsBase ')'
+	{
+
+	}
+	|
+	'(' ArgumentsBase T_ELLIPSIS ')'
+	{
+
+	}
+	|
+	'(' ArgumentsBase ',' ')'
+	{
+
+	}
+	|
+	'(' ArgumentsBase T_ELLIPSIS ',' ')'
+	{
+		
+	};
+ArgumentsBase:
+	ExpressionList
+	{
+
+	}
+	|
+	Type
+	{
+
+	}
+	|
+	Type ',' ExpressionList
+	{
+
+	};
+
+MethodExpr:
+	ReceiverType '.' MethodName
+	{
+
+	};
+ReceiverType:
+	Type
+	{
+
+	};
+
+/**********************************************************/
+/***********************OPERATORS**************************/
+/**********************************************************/
+Expression:
+	UnaryExpr
+	{
+
+	}
+	|
+	Expression binary_op Expression
+	{
+
+	};
+UnaryExpr:
+	PrimaryExpr
+	{
+
+	}
+	|
+	unary_op UnaryExpr
+	{
+
+	};
+
+binary_op:
+	T_OR | T_AND | rel_op | add_op | mul_op
+rel_op:
+	T_EQ | T_NOT_EQ | T_LESSER | T_LESSER_EQ | T_GREATER | T_GREATER_EQ
+add_op:
+	T_PLUS | T_MINUS | T_BIT_OR | T_BIT_XOR
+mul_op:
+	T_MULTIPLY | T_DIVIDE | T_MOD | T_SHIFT_LEFT | T_SHIFT_RIGHT | T_BIT_AND | T_BIT_XOR
+unary_op: 
+	T_PLUS | T_MINUS | T_NOT | T_BIT_XOR | T_MULTIPLY | T_BIT_AND | T_ARROW
+
+/**********************************************************/
+/**********************STATEMENTS**************************/
+/**********************************************************/
+
+/**********************************************************/
+/**************************VALUES**************************/
+/**********************************************************/
+Rvalue:
+	BasicLit
+	{
+		Log("basiclit to rvalue", $1.last_line);
+		$$ = $1;
+	}
+
+RvalueList:
+	Rvalue
+	{
+		$$=new std::vector<IType*>($1);
+	}
+	|
+	RvalueList T_COMMA Rvalue
 	{
 		$1->push_back($3);
 		$$ = $1;
 	}
-	|
-	Identifier 
-	{
-		$$=new std::vector<std::string*>($1);
-	};
 
-Type:
-	T_IDENTIFIER 
+Lvalue:
+	Identifier
 	{
-		IType* type = new Basic($1);
-		$$ = type;
-	};
-	|
-	T_LEFTBRACKET T_RIGHTBRACKET Type
-	{
-		IType* type = new Slice($3);
-		$$ = type;
-	};
+		auto var = table.GetVar($1, @1.last_line);
+		return new Var(var);
+	}
 
-TypeList:
-	TypeList T_COMMA Type
+Value:
+	Rvalue
+	{
+		$$ = $1;
+	}
+	|
+	Lvalue
+	{
+		$$ = $1->value;
+	}
+
+ValueList:
+	ValueList T_COMMA Value
 	{
 		$1->push_back($3);
 		$$ = $1;
 	}
 	| 
-	Type
+	Value
 	{
-		$$=new std::vector<IType*>($1);
+		$$=new std::vector<Value*>($1);
 	}
-
 /**********************************************************/
 /***********************START OF FILE**********************/
 /**********************************************************/
 
 
 StartFile:
-    T_PACKAGE T_IDENTIFIER ImportDecl TopLevelDeclList {
+    T_PACKAGE T_IDENTIFIER ImportDecl TopLevelDeclList 
+	{
 		DEBUG_PRINT("%d: package %s\n", @1.last_line, $2);
 	};
 
@@ -236,7 +1293,7 @@ TopLevelDecl:
 Declaration:
 	// var a int = 5
 	// var a, b int = 5, 6
-	T_VAR IdentifierList Type T_ASSIGN ExpressionList
+	T_VAR IdentifierList Type T_ASSIGN ValueList
 	{
 		DEBUG_PRINT("%d: var %s %s = <val> %s\n", @1.last_line, $2, $3, $5);
 
@@ -248,9 +1305,16 @@ Declaration:
 			Var var{name, type};
 			table.Lookup(var, true, @1.last_line);
 		}
+
+		auto& values = $5;
+		std::vector<IType*> valueTypes;
+		for (auto& value: values)
+		{
+			valueTypes.push_back(value->type);
+		}
 		
 		std::vector<IType*> types{type, names.size()};
-		TypeCheck(types, expressionTypes, @1.last_line);
+		TypeCheck(types, valueTypes, @1.last_line);
 	} 
 	// var a int (default value)
 	// var a, b int
@@ -258,78 +1322,60 @@ Declaration:
 	{ 
 		DEBUG_PRINT("%d: var %s %s\n", @1.last_line, $2, $3);
 
-		const auto ids = SplitList($2);
-		for (auto& id: ids)
+		auto& names = $2;
+		auto& type = $3;
+
+		for (auto& name: names)
 		{
-			VarEntry entry{id, $3};
-			table.Lookup(entry, true, @1.last_line);
+			Var var{name, type};
+			table.Lookup(var, true, @1.last_line);
 		}
 	}
 
 AssignDeclaration:
 	// a := 5
 	// a, b := 5, "str"
-	IdentifierList T_DECLASSIGN ExpressionList
-	{	
-		DEBUG_PRINT("%d: %s := <val> %s\n", @1.last_line, $1, $3);
-
-		const auto ids = SplitList($1);
-		const auto expressionTypes = SplitList($3);
-		SizeCheck(ids, expressionTypes, @1.last_line);
-
-		for (std::size_t i = 0; i < ids.size(); ++i)
-		{
-			VarEntry entry{ids[i], expressionTypes[i]};
-			table.Lookup(entry, true, @1.last_line);
-		}	
-	}
-
-IndexValue:
-	Value T_LEFTBRACKET Value T_RIGHTBRACKET
+	IdentifierList T_DECLASSIGN ValueList
 	{
-		DEBUG_PRINT("index value %s [%s]\n", $1, $3);
-		if (IsSliceType($1))
+		auto& names = $2;
+		auto& values = $5;
+
+		std::vector<IType*> valueTypes;
+		for (auto& value: values)
 		{
-			TypeCheck(SplitList($3), {inttype}, @1.last_line);
-			$$ = strdup(GetSliceType($1).c_str());
+			valueTypes.push_back(value->type);
 		}
-		else
-		{
-			OperationNotSupported($1, "[]", @1.last_line);
-		}
-	}
+		SizeCheck(names.size(), values.size(), @1.last_line);
 
-LvalueList:
-	LvalueList T_COMMA T_IDENTIFIER
-	{
-		std::string types($1);
-		types += ",";
-		types += $3;
-		$$ = strdup(types.c_str());
-	}
-	|
-	LvalueList T_COMMA IndexValue
-	{
-		std::string types($1);
-		types += ",";
-		types += $3;
-		$$ = strdup(types.c_str());
-	}
-	|
-	T_IDENTIFIER
-	{
-		const auto entry = table.GetVar($1, @1.last_line);
-		$$ = strdup(entry.datatype.c_str());
-	}
-	|
-	IndexValue
-	{
-		$$ = $1;
+		for (std::size_t i = 0; i < values.size(); ++i)
+		{
+			Var var{names[i], valueTypes[i]};
+			table.Lookup(var, true, @1.last_line);
+		}
 	}
 
 Assignment:
-	LvalueList T_ASSIGN ExpressionList
+	LvalueList T_ASSIGN ValueList
 	{
+		auto& lvalues = $1;
+		auto& values = $3;
+
+		for (auto& name: names)
+		{
+			Var var{name, type};
+			table.Lookup(var, true, @1.last_line);
+		}
+
+		auto& values = $5;
+		std::vector<IType*> valueTypes;
+		for (auto& value: values)
+		{
+			valueTypes.push_back(value->type);
+		}
+		
+		std::vector<IType*> types{type, names.size()};
+		TypeCheck(types, valueTypes, @1.last_line);
+
 		DEBUG_PRINT("%d: %s = <val> %s\n", @1.last_line, $1, $3);
 		const auto lvalueTypes = SplitList($1);
 		const auto expressionTypes = SplitList($3);
@@ -567,21 +1613,6 @@ Continue:
 		DEBUG_PRINT("%d: continue\n", @1.last_line);
 		const auto stmt = table.GetStatement(@1.last_line);
 	}
-
-ExpressionList:
-	ExpressionList T_COMMA Expression 
-	{
-		std::string types($1);
-		types += ",";
-		types += $3;
-		DEBUG_PRINT("%d: expression list %s\n", @1.last_line, types.c_str());
-		$$ = strdup(types.c_str());
-	}
-	| Expression 
-	{
-		DEBUG_PRINT("%d: expression %s\n", @1.last_line, $1);
-		$$=$1;
-	};
 
 Expression:
 	Value

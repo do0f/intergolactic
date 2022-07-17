@@ -7,6 +7,13 @@
 
 #include "entries.h"
 
+void Log(const std::string &msg, int lineno);
+void Error(const std::string &msg, int lineno);
+void ErrorTypeMismatch(IType* ltype, IType* rtype, int lineno);
+void ErrorSizeMismatch(std::size_t lsize, std::size_t rsize, int lineno);
+void ErrorVarNotFound(const std::string& name, int lineno);
+
+
 std::vector<std::string> GetTypes(const std::vector<VarEntry> &entries);
 void TypeCheck(const std::vector<std::string> &type1, std::vector<std::string> type2, int lineno);
 void SizeCheck(const std::vector<std::string> &ids, const std::vector<std::string> &types, int lineno);

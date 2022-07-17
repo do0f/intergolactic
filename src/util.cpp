@@ -7,7 +7,7 @@
 #include "debug.h"
 #include "builtin.h"
 
-void Log(const std::string& msg, int lineno)
+void Log(const std::string &msg, int lineno)
 {
   fmt::print("line {}: {}\n", lineno, msg);
 }
@@ -27,6 +27,12 @@ void ErrorTypeMismatch(IType* ltype, IType* rtype, int lineno)
 void ErrorSizeMismatch(std::size_t lsize, std::size_t rsize, int lineno)
 {
   auto msg = fmt::format("size mismatch {} and {}", lsize, rsize);
+  Error(msg, lineno);
+}
+
+void ErrorVarNotFound(const std::string& name, int lineno)
+{
+  auto msg = fmt::format("variable {} not found", name);
   Error(msg, lineno);
 }
 

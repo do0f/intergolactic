@@ -51,11 +51,11 @@ struct Pointer: public IType
 
 struct Value
 {
-  Value(void* value, IType* type): value(value), type(type)
+  Value(void* value, const IType* type): value(value), type(type)
   {
   }
   void* value;
-  IType* type;
+  const IType* type;
 };
 
 struct Var

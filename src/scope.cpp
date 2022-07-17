@@ -1,4 +1,5 @@
 #include "scope.h"
+#include "util.h"
 
 Scope::Scope(StatementType statement)
 {
@@ -8,6 +9,7 @@ Scope::Scope(FuncEntry func)
 {
     this->func = std::make_shared<FuncEntry>(func);
 }
+
 bool Scope::IsStatement() const
 {
     return statement != nullptr;
@@ -30,7 +32,18 @@ std::unordered_map<std::string, Var> &Scope::GetVars()
 {
     return vars;
 }
-std::unordered_map<std::string, Type> &Scope::GetTypes()
+
+Var Scope::GetVar(const std::string& name)
+{
+    const auto var = vars.find(name);
+    if (var == vars.cend())
+    {
+        return Var("", nullptr);
+    }
+    return var->second;
+}
+
+std::unordered_map<std::string, IType*> &Scope::GetTypes()
 {
     return types;
 }

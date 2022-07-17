@@ -23,50 +23,89 @@ NIL_VAL				    "nil"
 WHITESPACE              [\t\r\f\v]+
 %%
 
-"="				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_ASSIGN;}
-":="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DECLASSIGN;}
-"+"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_ADD;}
+"+"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_PLUS;}
 "-"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MINUS;}
 "*"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MULTIPLY;}
 "/"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DIVIDE;}
 "%"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MOD;}
 
-"&&"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LAND;}
-"||"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LOR;}
-"++"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_INCREMENT;}
-"--"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DECREMENT;}
+"&"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BIT_AND;}
+"|"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BIT_OR;}
+"^"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BIT_XOR;}
+"<<"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SHIFT_LEFT;}
+">>"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SHIFT_RIGHT;}
+"&^"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_AND_XOR;}
 
+"+="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_PLUS_EQ;}
+"-="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MINUS_EQ;}
+"*="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MULTIPLY_EQ;}
+"/="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DIVIDE_EQ;}
+"%="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MOD_EQ;}
 
-"=="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_EQL;}
-">"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_GTR;}
-"<"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LSR;}
+"&="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BIT_AND_EQ;}
+"|="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BIT_OR_EQ;}
+"^="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_XOR_EQ;}
+"<<="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SHIFT_LEFT_EQ;}
+">>="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SHIFT_RIGHT_EQ;}
+"&^="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_AND_XOR_EQ;}
+
+"&&"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_AND;}
+"||"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_OR;}
+"<-"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_ARROW;}
+"++"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_INCREMENT;}
+"--"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DECREMENT;}
+
+"=="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DOUBLE_EQ;}
+">"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_GREATER;}
+"<"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LESSER;}
+"="				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_EQ;}
 "!"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_NOT;}
+"~"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_TILDE;}
 
-"!="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_NEQ;}
-"<="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEQ;}
-">="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_GEQ;}
+"!="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_NOT_EQ;}
+"<="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LESSER_EQ;}
+">="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_GREATER_EQ;}
+":="			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DECL_EQ;}
+"..."			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_ELLIPSIS;}
 
-"("				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEFTPARANTHESES;}
-")"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RIGHTPARANTHESES;}
-"{"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEFTBRACE;}
-"}"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RIGHTBRACE;}
-"["				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEFTBRACKET;}
-"]"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RIGHTBRACKET;}
+"("				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEFT_PARANTHESES;}
+"["				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEFT_BRACKET;}
+"{"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_LEFT_BRACE;}
 ","				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_COMMA;}
-";"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SEMICOLON;}
 "."				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_PERIOD;}
 
-"package"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_PACKAGE;}
-"import"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_IMPORT;}
-"func"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_FUNC;}
+")"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RIGHT_PARANTHESES;}
+"]"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RIGHT_BRACKET;}
+"}"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RIGHT_BRACE;}
+";"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SEMICOLON;}
+":"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_COLON;}
+
 "break"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BREAK;} 
+"case"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_CASE;} 
+"chan"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_CHAN;} 
 "const"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_CONST;} 
-"continue"        	{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_CONTINUE;} 
-"else"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_ELSE;}
-"for"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_FOR;}
-"if"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_IF;}
-"return"        	{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RETURN;}
-"var"        		{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_VAR;}
+"continue"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_CONTINUE;} 
+"default"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DEFAULT;} 
+"defer"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_DEFER;} 
+"else"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_ELSE;} 
+"fallthrough"		{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_FALLTHROUGH;} 
+"for"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_FOR;} 
+"func"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_FUNC;} 
+"go"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_GO;} 
+"goto"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_GOTO;} 
+"if"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_IF;} 
+"import"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_IMPORT;} 
+"interface"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_INTERFACE;} 
+"map"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_MAP;} 
+"package"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_PACKAGE;} 
+"range"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RANGE;} 
+"return"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_RETURN;} 
+"select"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SELECT;} 
+"struct"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_STRUCT;} 
+"switch"			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_SWITCH;} 
+"type"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_TYPE;} 
+"var"				{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_VAR;} 
+
 {BOOL_CONST}		{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_BOOL_CONST;}
 {NIL_VAL}			{yylval.sval= strdup(yytext);yycolno+=prevleng; prevleng=yyleng;return T_NIL_VAL;}
 

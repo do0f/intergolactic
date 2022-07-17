@@ -20,9 +20,9 @@ public:
   void PopScope();
 
   void Lookup(Var var, bool isDeclaration, int lineno);
-  void Lookup(Type type, bool isDeclaration, int lineno);
+  void Lookup(IType *type, bool isDeclaration, int lineno);
 
-  VarEntry GetVar(std::string symbol, int lineno);
+  Var Table::GetVar(const std::string &name, int lineno);
   TypeEntry GetType(std::string symbol, int lineno);
 
   std::shared_ptr<FuncEntry> GetReturn(int lineno);
